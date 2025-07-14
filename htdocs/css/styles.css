@@ -237,15 +237,15 @@ body {
 
 /* TREE VIEW */
 .tree-list {
-    background: #f5f6fa !important;
-    background: #fff !important;
-    color: #212529 !important;
+    background: #212529 !important;
+    xbackground: #fff !important;
+    color: #ffffff !important;
     border-radius: 1.2em;
     padding: 2em;
     margin-bottom: 2em;
 }
 .tree-list h1, .tree-list h2, .tree-list h3, .tree-list h4, .tree-list h5, .tree-list h6 {
-    color: #23242b !important;
+    color: #ffffff !important;
 }
 
 .tree-page {
@@ -253,7 +253,7 @@ body {
     padding-bottom: 0;
 }
 .tree-separator {
-    color: #000;
+    color: #fff;
     border: none;
     border-bottom: 1.5px solid #ccc;
     margin: 1.6em 0 1.3em 0;
@@ -271,6 +271,7 @@ body {
 .tree-links {
     margin-left: 0.9em;
     margin-top: .2em;
+    text-decoration: none;
 }
 .tree-link { margin-bottom: .15em; }
 .tree-link a {
