@@ -1,0 +1,13 @@
+database:
+  driver: "sqlite"
+  file: "/var/www/linkmanager/etc/links.sqlite"
+
+# For MySQL/Postgres (example):
+# database:
+#   driver: "mysql"
+#   host: "localhost"
+#   name: "links"
+#   username: "<link_user>"
+#   password: "<change_me>"
+
+

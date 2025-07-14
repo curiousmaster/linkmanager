@@ -1,0 +1,9 @@
+x
+htdocs/images/*
+etc/links.sqlite
+etc/config.yml
+*.csv
+*-old
+*-bak
+*.log
+*.txt
