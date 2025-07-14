@@ -3,8 +3,9 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 
 // ---- Setup ----
-$pdo  = get_pdo();
-$user = get_user();
+$pdo    = get_pdo();
+$user   = get_user();
+$search = trim($_GET['search'] ?? '');
 
 // Fetch all pages and apply RBAC
 $allPages = $pdo->query("SELECT * FROM page ORDER BY sort_order, title")
@@ -35,8 +36,8 @@ if ($requestedTitle !== null) {
 }
 
 // Current page title (GET or cookie or default)
-$cookie   = $_COOKIE['last_page'] ?? '';
-$default  = $pages[0]['title'] ?? '';
+$cookie           = $_COOKIE['last_page'] ?? '';
+$default          = $pages[0]['title'] ?? '';
 $currentPageTitle = $requestedTitle
     ? $requestedTitle
     : ($cookie ?: $default);
@@ -77,6 +78,24 @@ if ($currentPage && $view !== 'tree') {
         $sec['tools'] = $l->fetchAll(PDO::FETCH_ASSOC);
     }
     unset($sec);
+
+    // If there's a search term, filter out non-matching links
+    if ($search !== '') {
+        foreach ($sections as $i => $sec) {
+            $filtered = array_filter($sec['tools'], function($tool) use($search) {
+                return stripos($tool['name'],        $search) !== false
+                    || stripos($tool['description'], $search) !== false
+                    || stripos($tool['url'],         $search) !== false;
+            });
+            if (empty($filtered)) {
+                unset($sections[$i]);
+            } else {
+                $sections[$i]['tools'] = $filtered;
+            }
+        }
+        // Re-index
+        $sections = array_values($sections);
+    }
 }
 
 // Build full tree
@@ -98,7 +117,7 @@ if ($view === 'tree') {
 
 // Page title
 $pageTitle = "Link Manager";
-if ($view!=='tree' && $currentPage) {
+if ($view !== 'tree' && $currentPage) {
     $pageTitle .= " – " . htmlspecialchars($currentPage['title'], ENT_QUOTES);
 }
 ?><!DOCTYPE html>
@@ -114,6 +133,7 @@ if ($view!=='tree' && $currentPage) {
       width: 220px;
       min-width: 220px;
       border-right: 1px solid #6c757d;  /* gray */
+      overflow-y: auto;
     }
     main {
       margin-left: 1.5rem;
@@ -121,7 +141,7 @@ if ($view!=='tree' && $currentPage) {
   </style>
 </head>
 <body>
-<?php include 'header.php'; ?>
+<?php include __DIR__ . '/header.php'; ?>
 
 <div class="d-flex" style="min-height: calc(100vh - 64px);">
   <!-- Left Sidebar -->
@@ -180,13 +200,13 @@ if ($view!=='tree' && $currentPage) {
             <div class="col-12 col-sm-6 col-md-4">
               <div class="card h-100 d-flex flex-row align-items-stretch"
                    style="<?=
-                      (!empty($tool['background']) ? 'background:'.htmlspecialchars($tool['background'],ENT_QUOTES).';' : '')
-                    . (!empty($tool['color'])      ? 'color:'.htmlspecialchars($tool['color'],ENT_QUOTES).';' : '')
+                     (!empty($tool['background']) ? 'background:'.htmlspecialchars($tool['background'],ENT_QUOTES).';' : '')
+                   . (!empty($tool['color'])      ? 'color:'.htmlspecialchars($tool['color'],ENT_QUOTES).';'      : '')
                    ?>">
                 <?php if (!empty($tool['logo'])): ?>
                   <img src="<?= htmlspecialchars($tool['logo'], ENT_QUOTES) ?>"
                        alt="<?= htmlspecialchars($tool['name'], ENT_QUOTES) ?> logo"
-                       style="max-height: 80px; max-width: 80px; object-fit: contain; padding: 0.5rem;">
+                       style="max-height:80px; object-fit:contain; padding:0.5rem;">
                 <?php endif; ?>
 
                 <div class="flex-grow-1 d-flex flex-column">
@@ -197,24 +217,20 @@ if ($view!=='tree' && $currentPage) {
                     </h5>
                     <a href="<?= htmlspecialchars($tool['url'], ENT_QUOTES) ?>"
                        class="btn btn-sm panel-link"
-                       style="border-color: #fbbf24; background: rgba(0,0,0,0.5)"
+                       style="border-color:#fbbf24; background:rgba(0,0,0,0.5)"
                        target="<?= stripos($tool['url'],'http')===0?'_blank':'_self' ?>">
                       Go
                     </a>
                   </div>
                   <?php if (!empty($tool['description'])): ?>
-                    <p class="small text-muted px-3 pb-2 mb-0">
-		      <div class="small px-3 pb-2 mb-0" style="color:<?= htmlspecialchars($tool['color'], ENT_QUOTES) ?>">
-                        <?= htmlspecialchars($tool['description'], ENT_QUOTES) ?>
-		      </div>
+                    <p class="small text-muted px-3 pb-2 mb-0" style="color:<?= htmlspecialchars($tool['color'], ENT_QUOTES) ?>">
+                      <?= htmlspecialchars($tool['description'], ENT_QUOTES) ?>
                     </p>
-
                   <?php endif; ?>
                 </div>
               </div>
             </div>
           <?php endforeach; ?>
-	  <hr style="height:2px;border-width:0;color:gray;background-color:gray; margin-top: 1.5em; margin-bottom: 0.5em;">
         <?php endforeach; ?>
       </div>
 
@@ -230,8 +246,8 @@ if ($view!=='tree' && $currentPage) {
             <div class="col">
               <div class="card h-100"
                    style="<?=
-                      (!empty($tool['background']) ? 'background:'.htmlspecialchars($tool['background'],ENT_QUOTES).';' : '')
-                    . (!empty($tool['color'])      ? 'color:'.htmlspecialchars($tool['color'],ENT_QUOTES).';' : '')
+                     (!empty($tool['background']) ? 'background:'.htmlspecialchars($tool['background'],ENT_QUOTES).';' : '')
+                   . (!empty($tool['color'])      ? 'color:'.htmlspecialchars($tool['color'],ENT_QUOTES).';'      : '')
                    ?>">
                 <img src="<?= htmlspecialchars($tool['logo'] ?: '/images/empty.png', ENT_QUOTES) ?>"
                      class="card-img-top p-2"
@@ -248,7 +264,7 @@ if ($view!=='tree' && $currentPage) {
                 <div class="card-footer bg-transparent border-0">
                   <a href="<?= htmlspecialchars($tool['url'], ENT_QUOTES) ?>"
                      class="btn w-100 panel-link"
-                     style="border-color: #fbbf24; background: rgba(0,0,0,0.5)"
+                     style="border-color:#fbbf24; background:rgba(0,0,0,0.5)"
                      target="<?= stripos($tool['url'],'http')===0?'_blank':'_self' ?>">
                     Open
                   </a>
@@ -257,13 +273,12 @@ if ($view!=='tree' && $currentPage) {
             </div>
           <?php endforeach; ?>
         </div>
-        <hr style="height:2px;border-width:0;color:gray;background-color:gray; margin-top: 1.5em; margin-bottom: 0.5em;">
       <?php endforeach; ?>
 
     <?php endif; ?>
   </main>
 </div>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/footer.php'; ?>
 </body>
 </html>
