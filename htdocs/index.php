@@ -17,12 +17,11 @@ foreach ($allPages as $p) {
     }
 }
 
-// Determine requested page
+// Determine requested page (for when not searching)
 $requestedTitle = $_GET['page'] ?? null;
 if ($requestedTitle !== null) {
     $allowed = array_column($pages,'title');
     if (!in_array($requestedTitle, $allowed, true)) {
-        // redirect back to first allowed page after 3s
         $first = urlencode($pages[0]['title'] ?? '');
         http_response_code(403);
         include __DIR__ . '/header.php';
@@ -35,7 +34,6 @@ if ($requestedTitle !== null) {
     }
 }
 
-// Current page title (GET or cookie or default)
 $cookie           = $_COOKIE['last_page'] ?? '';
 $default          = $pages[0]['title'] ?? '';
 $currentPageTitle = $requestedTitle
@@ -45,7 +43,6 @@ if (isset($_GET['page']) && $cookie !== $currentPageTitle) {
     setcookie('last_page', $currentPageTitle, time()+2592000, '/');
 }
 
-// Find current page record
 $currentPage = null;
 foreach ($pages as $p) {
     if (strcasecmp($p['title'], $currentPageTitle) === 0) {
@@ -66,9 +63,49 @@ if (isset($_GET['view']) && $_COOKIE['view'] !== $view) {
     ]);
 }
 
-// Load sections & tools
+//
+// If there's a search, build a global results array:
+//
+
+$searchResults = [];
+if ($search !== '') {
+    foreach ($pages as $p) {
+        // load every section for this page
+        $secStmt = $pdo->prepare("SELECT * FROM section WHERE page_id=? ORDER BY sort_order,name");
+        $secStmt->execute([(int)$p['id']]);
+        $pageSecs = $secStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $matchingSecs = [];
+        foreach ($pageSecs as $sec) {
+            // load all tools
+            $toolStmt = $pdo->prepare("SELECT * FROM link WHERE section_id=? ORDER BY sort_order,name");
+            $toolStmt->execute([(int)$sec['id']]);
+            $tools = $toolStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // filter by search term
+            $hits = array_filter($tools, function($tool) use($search) {
+                return stripos($tool['name'],        $search) !== false
+                    || stripos($tool['description'], $search) !== false
+                    || stripos($tool['url'],         $search) !== false;
+            });
+            if (!empty($hits)) {
+                $sec['tools'] = $hits;
+                $matchingSecs[] = $sec;
+            }
+        }
+
+        if (!empty($matchingSecs)) {
+            $searchResults[$p['title']] = $matchingSecs;
+        }
+    }
+}
+
+//
+// Otherwise load only the current page’s sections/tools as before
+//
+
 $sections = [];
-if ($currentPage && $view !== 'tree') {
+if ($search === '' && $currentPage && $view !== 'tree') {
     $s = $pdo->prepare("SELECT * FROM section WHERE page_id=? ORDER BY sort_order,name");
     $s->execute([(int)$currentPage['id']]);
     $sections = $s->fetchAll(PDO::FETCH_ASSOC);
@@ -78,29 +115,11 @@ if ($currentPage && $view !== 'tree') {
         $sec['tools'] = $l->fetchAll(PDO::FETCH_ASSOC);
     }
     unset($sec);
-
-    // If there's a search term, filter out non-matching links
-    if ($search !== '') {
-        foreach ($sections as $i => $sec) {
-            $filtered = array_filter($sec['tools'], function($tool) use($search) {
-                return stripos($tool['name'],        $search) !== false
-                    || stripos($tool['description'], $search) !== false
-                    || stripos($tool['url'],         $search) !== false;
-            });
-            if (empty($filtered)) {
-                unset($sections[$i]);
-            } else {
-                $sections[$i]['tools'] = $filtered;
-            }
-        }
-        // Re-index
-        $sections = array_values($sections);
-    }
 }
 
-// Build full tree
+// Build full tree if needed
 $allPagesTree = [];
-if ($view === 'tree') {
+if ($search === '' && $view === 'tree') {
     foreach ($pages as $page) {
         $s = $pdo->prepare("SELECT * FROM section WHERE page_id=? ORDER BY sort_order,name");
         $s->execute([(int)$page['id']]);
@@ -117,8 +136,12 @@ if ($view === 'tree') {
 
 // Page title
 $pageTitle = "Link Manager";
-if ($view !== 'tree' && $currentPage) {
-    $pageTitle .= " – " . htmlspecialchars($currentPage['title'], ENT_QUOTES);
+if ($search==='') {
+    if ($view!=='tree' && $currentPage) {
+        $pageTitle .= " – " . htmlspecialchars($currentPage['title'], ENT_QUOTES);
+    }
+} else {
+    $pageTitle = "Search results for “" . htmlspecialchars($search, ENT_QUOTES) . "”";
 }
 ?><!DOCTYPE html>
 <html lang="en">
@@ -158,8 +181,36 @@ if ($view !== 'tree' && $currentPage) {
 
   <!-- Main Content -->
   <main class="flex-grow-1 p-3">
-    <?php if ($view==='tree'): ?>
+    <?php if ($search !== ''): ?>
+      <h3>Search results for “<?= htmlspecialchars($search, ENT_QUOTES) ?>”</h3>
+      <?php if (empty($searchResults)): ?>
+        <p class="text-muted">No matches found.</p>
+      <?php else: ?>
+        <?php foreach ($searchResults as $pageTitle => $secs): ?>
+          <h4 class="mt-4"><?= htmlspecialchars($pageTitle, ENT_QUOTES) ?></h4>
+          <?php foreach ($secs as $sec): ?>
+            <h5 class="mt-3"><?= htmlspecialchars($sec['name'], ENT_QUOTES) ?></h5>
+            <?php if ($sec['description']): ?>
+              <p class="text-muted"><?= htmlspecialchars($sec['description'], ENT_QUOTES) ?></p>
+            <?php endif; ?>
+            <ul class="mb-3">
+              <?php foreach ($sec['tools'] as $tool): ?>
+                <li>
+                  <a href="<?= htmlspecialchars($tool['url'], ENT_QUOTES) ?>"
+                     target="<?= stripos($tool['url'],'http')===0?'_blank':'_self' ?>">
+                    <?= htmlspecialchars($tool['name'], ENT_QUOTES) ?>
+                  </a>
+                  <?php if ($tool['description']): ?>
+                    — <small class="text-secondary"><?= htmlspecialchars($tool['description'], ENT_QUOTES) ?></small>
+                  <?php endif; ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endforeach; ?>
+        <?php endforeach; ?>
+      <?php endif; ?>
 
+    <?php elseif ($view==='tree'): ?>
       <div class="tree-list">
         <?php foreach ($allPagesTree as $page): ?>
           <section class="mb-5">
@@ -178,7 +229,7 @@ if ($view !== 'tree' && $currentPage) {
                         <?= htmlspecialchars($tool['name'], ENT_QUOTES) ?>
                       </a>
                       <?php if ($tool['description']): ?>
-                        <small class="text-secondary">– <?= htmlspecialchars($tool['description'], ENT_QUOTES) ?></small>
+                        <small class="text-secondary">— <?= htmlspecialchars($tool['description'], ENT_QUOTES) ?></small>
                       <?php endif; ?>
                     </li>
                   <?php endforeach; ?>
@@ -190,7 +241,6 @@ if ($view !== 'tree' && $currentPage) {
       </div>
 
     <?php elseif ($view==='minimal'): ?>
-
       <div class="row g-3">
         <?php foreach ($sections as $sec): if (empty($sec['tools'])) continue; ?>
           <div class="col-12">
@@ -208,7 +258,6 @@ if ($view !== 'tree' && $currentPage) {
                        alt="<?= htmlspecialchars($tool['name'], ENT_QUOTES) ?> logo"
                        style="max-height:80px; object-fit:contain; padding:0.5rem;">
                 <?php endif; ?>
-
                 <div class="flex-grow-1 d-flex flex-column">
                   <div class="card-body d-flex justify-content-between align-items-center py-2 px-3">
                     <h5 class="card-title mb-0"
@@ -235,7 +284,6 @@ if ($view !== 'tree' && $currentPage) {
       </div>
 
     <?php else /* card view */: ?>
-
       <?php foreach ($sections as $sec): if (empty($sec['tools'])) continue; ?>
         <h4 class="mt-4 text-white"><?= htmlspecialchars($sec['name'], ENT_QUOTES) ?></h4>
         <?php if ($sec['description']): ?>
@@ -274,7 +322,6 @@ if ($view !== 'tree' && $currentPage) {
           <?php endforeach; ?>
         </div>
       <?php endforeach; ?>
-
     <?php endif; ?>
   </main>
 </div>
@@ -282,3 +329,4 @@ if ($view !== 'tree' && $currentPage) {
 <?php include __DIR__ . '/footer.php'; ?>
 </body>
 </html>
+
