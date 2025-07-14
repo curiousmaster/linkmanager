@@ -207,13 +207,13 @@ if ($search !== '') {
         <p class="text-muted">No matches found.</p>
       <?php else: ?>
         <?php foreach ($searchResults as $pt => $secs): ?>
-          <h4 class="mt-4 text-white"><?= htmlspecialchars($pt, ENT_QUOTES) ?></h4>
+          <h2 class="mt-4 text-white"><?= htmlspecialchars($pt, ENT_QUOTES) ?></h4>
           <?php foreach ($secs as $sec): ?>
             <h5 class="mt-3 text-white"><?= htmlspecialchars($sec['name'], ENT_QUOTES) ?></h5>
             <?php if ($sec['description']): ?>
               <p class="text-muted"><?= htmlspecialchars($sec['description'], ENT_QUOTES) ?></p>
             <?php endif; ?>
-            <ul class="mb-3">
+            <ul class="mb-4">
               <?php foreach ($sec['tools'] as $tool): ?>
                 <li>
                   <a href="<?= htmlspecialchars($tool['url'], ENT_QUOTES) ?>"

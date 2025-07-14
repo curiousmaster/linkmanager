@@ -476,9 +476,9 @@ main {
   margin-left: 1rem; /* or whatever you prefer, e.g. 20px */
 }
 /* —— SEARCH RESULTS (minimal view colors) —— */
-  .search-results h3,
-  .search-results h4,
-  .search-results h5 {
+.search-results h3,
+.search-results h4,
+.search-results h5 {
   color: #ffffff;           /* white headings */
 }
 .search-results .text-muted {
