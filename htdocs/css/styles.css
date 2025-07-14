@@ -475,3 +475,24 @@ footer {
 main {
   margin-left: 1rem; /* or whatever you prefer, e.g. 20px */
 }
+/* —— SEARCH RESULTS (minimal view colors) —— */
+  .search-results h3,
+  .search-results h4,
+  .search-results h5 {
+  color: #ffffff;           /* white headings */
+}
+.search-results .text-muted {
+  color: #adb5bd !important;/* muted description text */
+}
+.search-results .panel-link {
+  border-color: #fbbf24;    /* gold border */
+  background: rgba(0,0,0,0.5);
+  color: #ffffff;           /* white link text */
+}
+.search-results ul {
+  list-style: none;
+  padding-left: 0;
+}
+.search-results li + li {
+  margin-top: .5rem;
+}
