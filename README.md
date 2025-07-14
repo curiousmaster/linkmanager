@@ -20,3 +20,6 @@ Includes a responsive UI, user roles (admin/user), and a simple web-based editor
 5. **Open `index.php` in your browser.**
 
 6. Start adding pages / links.
+
+---
+
