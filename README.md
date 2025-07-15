@@ -100,3 +100,6 @@ Main,Social,Twitter API,Official Twitter API docs,https://developer.twitter.com/
 
 ---
 
+## License
+
+[MIT](LICENSE)
