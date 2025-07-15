@@ -120,5 +120,3 @@ function can_view_page(PDO $pdo, ?array $user, int $page_id): bool {
     }
     return false;
 }
-?>
-

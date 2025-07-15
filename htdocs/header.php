@@ -20,7 +20,7 @@ $mainTitle = $pages[0]['title'] ?? '';
 
 <header class="headerbar">
   <!-- Logo + Title -->
-  <a href="/?page=<?= urlencode($mainTitle) ?>"
+  <a href="/?page=Main"
      class="d-flex align-items-center text-decoration-none"
      style="gap:.7em;">
     <img src="/images/links.png" class="header-logo" alt="Logo">
@@ -72,6 +72,8 @@ $mainTitle = $pages[0]['title'] ?? '';
       <a href="/manage_users.php" class="btn btn-outline-light" title="Manage Users">
         <i class="bi bi-people"></i>
       </a>
+    <?php endif; ?>
+    <?php if ($user): ?>
       <a href="/edit.php" class="btn btn-outline-light" title="Edit Collection">
         <i class="bi bi-pencil"></i>
       </a>
