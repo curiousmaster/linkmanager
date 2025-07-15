@@ -95,14 +95,15 @@ if ($adminPass === '') {
 $adminHash = password_hash($adminPass, PASSWORD_DEFAULT);
 
 // Create schema
-$ddl = <<<'SQL'
+if ($driver === 'mysql') {
+    $ddl = <<<'SQL'
 CREATE TABLE IF NOT EXISTS page (
-  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(255) NOT NULL UNIQUE,
   sort_order INT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS section (
-  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   page_id INT NOT NULL,
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -110,7 +111,7 @@ CREATE TABLE IF NOT EXISTS section (
   FOREIGN KEY(page_id) REFERENCES page(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS link (
-  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   section_id INT NOT NULL,
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -123,12 +124,12 @@ CREATE TABLE IF NOT EXISTS link (
   FOREIGN KEY(section_id) REFERENCES section(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS user (
-  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(100) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL
 );
 CREATE TABLE IF NOT EXISTS role (
-  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(50) NOT NULL UNIQUE
 );
 CREATE TABLE IF NOT EXISTS user_role (
@@ -138,30 +139,90 @@ CREATE TABLE IF NOT EXISTS user_role (
   FOREIGN KEY(user_id) REFERENCES user(id) ON DELETE CASCADE,
   FOREIGN KEY(role_id) REFERENCES role(id) ON DELETE CASCADE
 );
--- in MySQL or SQLite migration
-
-CREATE TABLE `group` (
-  id   INTEGER PRIMARY KEY AUTO_INCREMENT,   -- SQLite: INTEGER PRIMARY KEY
+CREATE TABLE IF NOT EXISTS `groups` (
+  id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL UNIQUE
 );
-
-CREATE TABLE user_group (
-  user_id  INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS user_group (
+  user_id INT NOT NULL,
+  group_id INT NOT NULL,
+  PRIMARY KEY(user_id, group_id),
+  FOREIGN KEY(user_id) REFERENCES user(id) ON DELETE CASCADE,
+  FOREIGN KEY(group_id) REFERENCES `groups`(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS page_group (
+  page_id INT NOT NULL,
+  group_id INT NOT NULL,
+  PRIMARY KEY(page_id, group_id),
+  FOREIGN KEY(page_id)  REFERENCES page(id)   ON DELETE CASCADE,
+  FOREIGN KEY(group_id) REFERENCES `groups`(id) ON DELETE CASCADE
+);
+SQL;
+} else {
+    // SQLite
+    $ddl = <<<'SQL'
+CREATE TABLE IF NOT EXISTS page (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL UNIQUE,
+  sort_order INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS section (
+  id INTEGER PRIMARY KEY,
+  page_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  sort_order INTEGER NOT NULL,
+  FOREIGN KEY(page_id) REFERENCES page(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS link (
+  id INTEGER PRIMARY KEY,
+  section_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  url TEXT,
+  logo TEXT,
+  background TEXT,
+  color TEXT,
+  created_by INTEGER,
+  sort_order INTEGER NOT NULL,
+  FOREIGN KEY(section_id) REFERENCES section(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS user (
+  id INTEGER PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS role (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS user_role (
+  user_id INTEGER NOT NULL,
+  role_id INTEGER NOT NULL,
+  PRIMARY KEY(user_id, role_id),
+  FOREIGN KEY(user_id) REFERENCES user(id) ON DELETE CASCADE,
+  FOREIGN KEY(role_id) REFERENCES role(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS groups (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS user_group (
+  user_id INTEGER NOT NULL,
   group_id INTEGER NOT NULL,
   PRIMARY KEY(user_id, group_id),
-  FOREIGN KEY(user_id) REFERENCES user(id)    ON DELETE CASCADE,
-  FOREIGN KEY(group_id) REFERENCES `group`(id) ON DELETE CASCADE
+  FOREIGN KEY(user_id) REFERENCES user(id) ON DELETE CASCADE,
+  FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE
 );
-
-CREATE TABLE page_group (
-  page_id  INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS page_group (
+  page_id INTEGER NOT NULL,
   group_id INTEGER NOT NULL,
   PRIMARY KEY(page_id, group_id),
   FOREIGN KEY(page_id)  REFERENCES page(id)   ON DELETE CASCADE,
-  FOREIGN KEY(group_id) REFERENCES `group`(id) ON DELETE CASCADE
+  FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE
 );
-
 SQL;
+}
 
 $pdo->exec($ddl);
 
