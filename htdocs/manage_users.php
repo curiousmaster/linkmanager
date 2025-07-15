@@ -190,8 +190,11 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
 
 <div class="container py-4">
   <h2>Manage Users &amp; Groups</h2>
+
   <?php if ($alert): ?>
-    <div class="alert alert-<?=htmlspecialchars($alert[0])?>"><?=htmlspecialchars($alert[1])?></div>
+    <div class="alert alert-<?=htmlspecialchars($alert[0])?>">
+      <?=htmlspecialchars($alert[1])?>
+    </div>
   <?php endif; ?>
 
   <!-- Users Section -->
@@ -200,11 +203,11 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
     <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">Add User</button>
     <table class="table table-striped">
       <thead>
-	<tr>
-	   <th style="width:30%">Username</th>
-	   <th style="width:30%">Roles</th>
-	   <th style="width:30%">Groups</th>
-	   <th class="text-end">Actions</th>
+        <tr>
+           <th style="width:15%">Username</th>
+           <th style="width:15%">Roles</th>
+           <th style="width:55%">Groups</th>
+           <th class="text-end">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -213,30 +216,28 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
           <td><?=htmlspecialchars($u['username'])?></td>
           <td><?=htmlspecialchars(implode(', ',$u['roles']))?></td>
           <?php
-          $assigned_groups = [];
-          foreach ($groups as $g) {
-              if (in_array($g['id'], $u['groups'])) {
-                  $assigned_groups[] = $g['name'];
-              }
-          }
-          $escaped = '';
-          if (!empty($assigned_groups)) {
-              $escaped = htmlspecialchars(
-                  implode(', ', $assigned_groups),
-                  ENT_QUOTES,
-                  'UTF-8'
-              );
-          }
+            $assigned_groups = [];
+            foreach ($groups as $g) {
+                if (in_array($g['id'], $u['groups'])) {
+                    $assigned_groups[] = $g['name'];
+                }
+            }
+            $escaped_groups = '';
+            if (!empty($assigned_groups)) {
+                $escaped_groups = htmlspecialchars(
+                    implode(', ', $assigned_groups),
+                    ENT_QUOTES,
+                    'UTF-8'
+                );
+            }
           ?>
-          <td>
-            <?= $escaped ?><br>
-          </td>
+          <td><?= $escaped_groups ?><br></td>
           <td class="text-end">
             <?php if ($u['username'] !== 'admin'): ?>
               <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal<?=$u['id']?>">Edit</button>
               <button class="btn btn-sm btn-danger"    data-bs-toggle="modal" data-bs-target="#deleteUserModal<?=$u['id']?>">Delete</button>
             <?php else: ?>
-              <span class="text-muted">System</span>
+              <span class="text-muted">Administrator</span>
             <?php endif; ?>
           </td>
         </tr>
@@ -251,21 +252,52 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
     <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addGroupModal">Add Group</button>
     <table class="table table-hover">
       <thead>
-	<tr>
-	  <th style="width:30%">Name</th>
-	  <th style="width:30%">Members</th>
-	  <th class="text-end">Actions</th>
+        <tr>
+          <th style="width:15%">Name</th>
+          <th style="width:15%">#</th>
+          <th style="width:55%">Members</th>
+          <th class="text-end">Actions</th>
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($groups as $g): ?>
-        <?php $cnt = $pdo->prepare("SELECT COUNT(*) FROM user_group WHERE group_id=?"); $cnt->execute([$g['id']]); ?>
+        <?php
+        $countStmt  = $pdo->prepare("SELECT COUNT(*) FROM user_group WHERE group_id=?");
+        $memberStmt = $pdo->prepare("
+          SELECT u.username
+          FROM user u
+          JOIN user_group ug ON u.id = ug.user_id
+          WHERE ug.group_id = ?
+          ORDER BY u.username
+        ");
+        foreach ($groups as $g):
+          $countStmt->execute([$g['id']]);
+          $memberCount = $countStmt->fetchColumn();
+          $memberStmt->execute([$g['id']]);
+          $members = $memberStmt->fetchAll(PDO::FETCH_COLUMN);
+          $membersList = '';
+          if (!empty($members)) {
+              $membersList = htmlspecialchars(
+                  implode(', ', $members),
+                  ENT_QUOTES,
+                  'UTF-8'
+              );
+          }
+        ?>
         <tr>
           <td><?=htmlspecialchars($g['name'])?></td>
-          <td><?=$cnt->fetchColumn()?></td>
+          <td><?=$memberCount?></td>
+          <td><?=$membersList?><br></td>
           <td class="text-end">
-            <button class="btn btn-sm btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#editGroupModal<?=$g['id']?>">Edit</button>
-            <button class="btn btn-sm btn-danger"              data-bs-toggle="modal" data-bs-target="#deleteGroupModal<?=$g['id']?>">Delete</button>
+            <button class="btn btn-sm btn-secondary me-2"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editGroupModal<?=$g['id']?>">
+              Edit
+            </button>
+            <button class="btn btn-sm btn-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteGroupModal<?=$g['id']?>">
+              Delete
+            </button>
           </td>
         </tr>
         <?php endforeach; ?>
@@ -329,7 +361,6 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <!-- Optional new password field -->
         <div class="mb-2">
           <label class="form-label">New Password</label>
           <input type="password" name="password" class="form-control" minlength="6" placeholder="Leave empty to keep current">
@@ -382,8 +413,7 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
   </div></div>
 <?php endforeach; ?>
 
-<!-- Add/Edit/Delete Group Modals -->
-<!-- Add Group -->
+<!-- Add Group Modal -->
 <div class="modal fade" id="addGroupModal" tabindex="-1"><div class="modal-dialog">
   <form method="post" class="modal-content">
     <input type="hidden" name="add_group" value="1">
@@ -402,6 +432,7 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
   </form>
 </div></div>
 
+<!-- Edit/Delete Group Modals -->
 <?php foreach ($groups as $g): ?>
   <!-- Edit Group -->
   <div class="modal fade" id="editGroupModal<?=$g['id']?>" tabindex="-1"><div class="modal-dialog">
@@ -447,3 +478,4 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
