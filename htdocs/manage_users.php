@@ -200,7 +200,12 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
     <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">Add User</button>
     <table class="table table-striped">
       <thead>
-        <tr><th>Username</th><th>Roles</th><th>Groups</th><th>Actions</th></tr>
+	<tr>
+	   <th style="width:30%">Username</th>
+	   <th style="width:30%">Roles</th>
+	   <th style="width:30%">Groups</th>
+	   <th class="text-end">Actions</th>
+        </tr>
       </thead>
       <tbody>
         <?php foreach ($users as $u): ?>
@@ -214,7 +219,7 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
               <?php endif; ?>
             <?php endforeach; ?>
           </td>
-          <td>
+          <td class="text-end">
             <?php if ($u['username'] !== 'admin'): ?>
               <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal<?=$u['id']?>">Edit</button>
               <button class="btn btn-sm btn-danger"    data-bs-toggle="modal" data-bs-target="#deleteUserModal<?=$u['id']?>">Delete</button>
@@ -234,7 +239,11 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
     <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addGroupModal">Add Group</button>
     <table class="table table-hover">
       <thead>
-        <tr><th>Name</th><th>Members</th><th>Actions</th></tr>
+	<tr>
+	  <th style="width:30%">Name</th>
+	  <th style="width:30%">Members</th>
+	  <th class="text-end">Actions</th>
+        </tr>
       </thead>
       <tbody>
         <?php foreach ($groups as $g): ?>
@@ -242,8 +251,8 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
         <tr>
           <td><?=htmlspecialchars($g['name'])?></td>
           <td><?=$cnt->fetchColumn()?></td>
-          <td>
-            <button class="btn btn-sm btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#editGroupModal<?=$g['id']?>">Rename</button>
+          <td class="text-end">
+            <button class="btn btn-sm btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#editGroupModal<?=$g['id']?>">Edit</button>
             <button class="btn btn-sm btn-danger"              data-bs-toggle="modal" data-bs-target="#deleteGroupModal<?=$g['id']?>">Delete</button>
           </td>
         </tr>
@@ -388,7 +397,7 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
       <input type="hidden" name="edit_group" value="1">
       <input type="hidden" name="group_id"   value="<?=$g['id']?>">
       <div class="modal-header">
-        <h5 class="modal-title">Rename Group</h5>
+        <h5 class="modal-title">Edit Group</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
