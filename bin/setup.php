@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS link (
   logo TEXT,
   background VARCHAR(7),
   color VARCHAR(7),
+  created_by INT,
   sort_order INT NOT NULL,
   FOREIGN KEY(section_id) REFERENCES section(id) ON DELETE CASCADE
 );
