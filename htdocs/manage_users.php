@@ -212,12 +212,24 @@ $groups = $pdo->query("SELECT id,name FROM groups ORDER BY name")->fetchAll(PDO:
         <tr>
           <td><?=htmlspecialchars($u['username'])?></td>
           <td><?=htmlspecialchars(implode(', ',$u['roles']))?></td>
+          <?php
+          $assigned_groups = [];
+          foreach ($groups as $g) {
+              if (in_array($g['id'], $u['groups'])) {
+                  $assigned_groups[] = $g['name'];
+              }
+          }
+          $escaped = '';
+          if (!empty($assigned_groups)) {
+              $escaped = htmlspecialchars(
+                  implode(', ', $assigned_groups),
+                  ENT_QUOTES,
+                  'UTF-8'
+              );
+          }
+          ?>
           <td>
-            <?php foreach ($groups as $g): ?>
-              <?php if (in_array($g['id'],$u['groups'])): ?>
-                <?=htmlspecialchars($g['name'])?><br>
-              <?php endif; ?>
-            <?php endforeach; ?>
+            <?= $escaped ?><br>
           </td>
           <td class="text-end">
             <?php if ($u['username'] !== 'admin'): ?>
